@@ -1,28 +1,36 @@
 """
 Operator-Checker Telegram Bot
-──────────────────────────────
-• Send an MSISDN → get operator + country
-• Inline button points to @CYBEREXPERTPK
+─────────────────────────────
+Hard-coded BOT_TOKEN version – no env vars needed.
 
-Designed for Render free-tier (or any host).
+Author / Contact button → @CYBEREXPERTPK
 """
 
-import logging, os, requests
-from telegram import (Update, InlineKeyboardButton, InlineKeyboardMarkup)
-from telegram.ext import (ApplicationBuilder, CommandHandler,
-                          MessageHandler, ContextTypes, filters)
+import logging
+import requests
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-# ─── CONFIG ────────────────────────────────────────────────
-BOT_TOKEN  = os.getenv("7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M")            # set in Render env-vars
+# ─── CONFIG ─────────────────────────────────────────────
+BOT_TOKEN  = "7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M"  # ← your live token
 REB_URL    = "https://prod-mp.rebtel.com/graphql"
 AUTH_HDR   = "application 7443a5f6-01a7-4ce7-8e87-c36212fad4f5"
 AUTHOR_URL = "https://t.me/CYBEREXPERTPK"
-# ──────────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
 
 def gql_body(msisdn: str) -> dict:
+    """GraphQL body for Rebtel operator lookup."""
     return {
         "variables": {"input": {"msisdns": msisdn}},
         "operationName": "OperatorLookup",
@@ -33,14 +41,14 @@ def gql_body(msisdn: str) -> dict:
         ),
     }
 
-async def start(update: Update, _):
+async def start(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 *Welcome!*  Send me a number with country code "
+        "👋 *Welcome!*  Send a mobile number with country code "
         "(e.g. `923001234567`) and I’ll tell you the operator.",
         parse_mode="Markdown",
     )
 
-async def lookup(update: Update, _):
+async def lookup(update: Update, _: ContextTypes.DEFAULT_TYPE):
     msisdn = update.message.text.strip()
     if not msisdn.isdigit():
         await update.message.reply_text("❌ Digits only, please.")
@@ -69,6 +77,7 @@ async def lookup(update: Update, _):
             .get("operators", [{}])[0]
             .get("operator")
         )
+
         if op:
             reply = (
                 f"📡 *Operator* : {op['name']}\n"
@@ -76,6 +85,7 @@ async def lookup(update: Update, _):
             )
         else:
             reply = "❌ Invalid or unsupported number."
+
     except Exception as exc:
         logging.exception("Rebtel call failed: %s", exc)
         reply = "⚠️ Error contacting operator API."
@@ -86,8 +96,6 @@ async def lookup(update: Update, _):
     await update.message.reply_text(reply, parse_mode="Markdown", reply_markup=kb)
 
 def main():
-    if not BOT_TOKEN:
-        raise SystemExit("BOT_TOKEN env-var not set in Render.")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lookup))
