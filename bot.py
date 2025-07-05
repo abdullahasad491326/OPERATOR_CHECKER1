@@ -13,7 +13,7 @@ from telegram.ext import (ApplicationBuilder, CommandHandler,
                           MessageHandler, ContextTypes, filters)
 
 # ─── CONFIG ────────────────────────────────────────────────
-BOT_TOKEN  = os.getenv("BOT_TOKEN")            # set in Render env-vars
+BOT_TOKEN  = os.getenv("7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M")            # set in Render env-vars
 REB_URL    = "https://prod-mp.rebtel.com/graphql"
 AUTH_HDR   = "application 7443a5f6-01a7-4ce7-8e87-c36212fad4f5"
 AUTHOR_URL = "https://t.me/CYBEREXPERTPK"
