@@ -1,0 +1,11 @@
+services:
+  - name: operator-checker-bot
+    type: web
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: BOT_TOKEN      # paste real token in the Render dashboard
+        sync: false
+    autoDeploy: true
