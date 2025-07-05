@@ -1,9 +1,11 @@
 """
 Operator-Checker Telegram Bot
-─────────────────────────────
-Hard-coded BOT_TOKEN version – no env vars needed.
+──────────────────────────────
+• Send MSISDN → get operator + country
+• Uses python-telegram-bot 21.x
+• drop_pending_updates(True) prevents 409 Conflict errors
 
-Author / Contact button → @CYBEREXPERTPK
+Author / contact button → @CYBEREXPERTPK
 """
 
 import logging
@@ -17,12 +19,12 @@ from telegram.ext import (
     filters,
 )
 
-# ─── CONFIG ─────────────────────────────────────────────
-BOT_TOKEN  = "7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M"  # ← your live token
-REB_URL    = "https://prod-mp.rebtel.com/graphql"
-AUTH_HDR   = "application 7443a5f6-01a7-4ce7-8e87-c36212fad4f5"
+# ─── CONFIG ────────────────────────────────────────────────────────────
+BOT_TOKEN = "7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M"  # ← your live token
+REB_URL   = "https://prod-mp.rebtel.com/graphql"
+AUTH_HDR  = "application 7443a5f6-01a7-4ce7-8e87-c36212fad4f5"
 AUTHOR_URL = "https://t.me/CYBEREXPERTPK"
-# ───────────────────────────────────────────────────────
+# ───────────────────────────────────────────────────────────────────────
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +32,7 @@ logging.basicConfig(
 )
 
 def gql_body(msisdn: str) -> dict:
-    """GraphQL body for Rebtel operator lookup."""
+    """Rebtel GraphQL payload"""
     return {
         "variables": {"input": {"msisdns": msisdn}},
         "operationName": "OperatorLookup",
@@ -57,7 +59,7 @@ async def lookup(update: Update, _: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🔍 Searching…")
 
     try:
-        r = requests.post(
+        resp = requests.post(
             REB_URL,
             json=gql_body(msisdn),
             headers={
@@ -68,8 +70,9 @@ async def lookup(update: Update, _: ContextTypes.DEFAULT_TYPE):
             },
             timeout=10,
         )
-        r.raise_for_status()
-        data = r.json()
+        resp.raise_for_status()
+        data = resp.json()
+
         op = (
             data.get("data", {})
             .get("availability", {})
@@ -90,13 +93,18 @@ async def lookup(update: Update, _: ContextTypes.DEFAULT_TYPE):
         logging.exception("Rebtel call failed: %s", exc)
         reply = "⚠️ Error contacting operator API."
 
-    kb = InlineKeyboardMarkup(
+    keyboard = InlineKeyboardMarkup(
         [[InlineKeyboardButton("👨‍💻 Contact Author", url=AUTHOR_URL)]]
     )
-    await update.message.reply_text(reply, parse_mode="Markdown", reply_markup=kb)
+    await update.message.reply_text(reply, parse_mode="Markdown", reply_markup=keyboard)
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .drop_pending_updates(True)   # avoid 409 Conflict on restart
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lookup))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
