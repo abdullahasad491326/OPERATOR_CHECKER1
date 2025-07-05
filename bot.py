@@ -1,11 +1,11 @@
 """
 Operator-Checker Telegram Bot
-──────────────────────────────
+─────────────────────────────
 • Send MSISDN → get operator + country
-• Uses python-telegram-bot 21.x
-• drop_pending_updates(True) prevents 409 Conflict errors
+• Compatible with python-telegram-bot 21.1.x
+• drop_pending_updates handled in run_polling()
 
-Author / contact button → @CYBEREXPERTPK
+Author / Contact button → @CYBEREXPERTPK
 """
 
 import logging
@@ -19,12 +19,12 @@ from telegram.ext import (
     filters,
 )
 
-# ─── CONFIG ────────────────────────────────────────────────────────────
-BOT_TOKEN = "7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M"  # ← your live token
+# ─── CONFIG ───────────────────────────────────────────────────
+BOT_TOKEN = "7953026946:AAHr1Ka8CXcJ14StSOR-BC3ngalt9mCSx2M"
 REB_URL   = "https://prod-mp.rebtel.com/graphql"
 AUTH_HDR  = "application 7443a5f6-01a7-4ce7-8e87-c36212fad4f5"
 AUTHOR_URL = "https://t.me/CYBEREXPERTPK"
-# ───────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 
 def gql_body(msisdn: str) -> dict:
-    """Rebtel GraphQL payload"""
+    """Rebtel GraphQL payload."""
     return {
         "variables": {"input": {"msisdns": msisdn}},
         "operationName": "OperatorLookup",
@@ -93,21 +93,22 @@ async def lookup(update: Update, _: ContextTypes.DEFAULT_TYPE):
         logging.exception("Rebtel call failed: %s", exc)
         reply = "⚠️ Error contacting operator API."
 
-    keyboard = InlineKeyboardMarkup(
+    kb = InlineKeyboardMarkup(
         [[InlineKeyboardButton("👨‍💻 Contact Author", url=AUTHOR_URL)]]
     )
-    await update.message.reply_text(reply, parse_mode="Markdown", reply_markup=keyboard)
+    await update.message.reply_text(reply, parse_mode="Markdown", reply_markup=kb)
 
 def main():
     app = (
         ApplicationBuilder()
         .token(BOT_TOKEN)
-        .drop_pending_updates(True)   # avoid 409 Conflict on restart
         .build()
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lookup))
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    # drop pending updates to avoid 409 Conflict on redeploy
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 if __name__ == "__main__":
     main()
