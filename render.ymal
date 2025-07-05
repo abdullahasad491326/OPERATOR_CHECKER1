@@ -1,9 +1,8 @@
-
 services:
   - name: operator-checker-bot
-    type: web
-    runtime: python        # Render detects python from runtime.txt
-    plan: free             # Free tier
+    type: worker                 # <-- Background Worker
+    runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
-    autoDeploy: true       # Redeploy on every git push
+    autoDeploy: true
